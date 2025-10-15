@@ -266,11 +266,6 @@ void Parser::handleIfStatement() {
 
 void Parser::handleWhileStatement() {
     advance(); // skip 'while'
-    if (peek().type != TokenType::LEFT_PAREN) {
-        std::cerr << "Syntax error: expected '(' after 'while'\n";
-        return;
-    }
-    advance(); // skip '('
     
     // Store the current position to jump back to for the loop
     size_t condition_start_pos = pos;
@@ -282,12 +277,6 @@ void Parser::handleWhileStatement() {
         if (!parseCondition()) {
             break; // Exit loop if condition is false
         }
-
-        if (peek().type != TokenType::RIGHT_PAREN) {
-            std::cerr << "Syntax error: expected ')' after while condition\n";
-            return;
-        }
-        advance(); // skip ')'
 
         if (peek().type != TokenType::LEFT_BRACE) {
             std::cerr << "Syntax error: expected '{' after while condition\n";
@@ -305,12 +294,9 @@ void Parser::handleWhileStatement() {
     // After the loop, skip the condition and the block
     // First, skip the condition part
     pos = condition_start_pos;
-    // Find the matching ')' for the condition
-    int paren_level = 1;
-    while (paren_level > 0 && peek().type != TokenType::END_OF_FILE) {
-        Token t = advance();
-        if (t.type == TokenType::LEFT_PAREN) paren_level++;
-        if (t.type == TokenType::RIGHT_PAREN) paren_level--;
+    // Find the matching '{' for the block
+    while (peek().type != TokenType::LEFT_BRACE && peek().type != TokenType::END_OF_FILE) {
+        advance();
     }
 
     if (peek().type == TokenType::LEFT_BRACE) {
