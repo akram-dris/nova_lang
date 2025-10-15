@@ -38,7 +38,7 @@ private:
     Value getVariable(const std::string& name);
     void setVariable(const std::string& name, const Value& value);
 
-    void handlePrint();
+    void handleShow();
     void handleVariableDeclaration();
     void handleIfStatement();
     void handleWhileStatement();

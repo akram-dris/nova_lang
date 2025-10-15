@@ -165,7 +165,7 @@ Value Parser::parseExpression() {
     return result;
 }
 
-void Parser::handlePrint() {
+void Parser::handleShow() {
     advance(); // skip 'print'
     Value value = parseExpression();
     if (value.type == ValueType::NUMBER) {
@@ -419,8 +419,8 @@ Value Parser::handleFunctionCall(const std::string& name) {
 void Parser::run_single_statement() {
     if (is_returning) return;
     Token current = peek();
-    if (current.type == TokenType::PRINT) {
-        handlePrint();
+    if (current.type == TokenType::SHOW) {
+        handleShow();
     } else if (current.type == TokenType::KEYWORD_IF) {
         handleIfStatement();
     } else if (current.type == TokenType::KEYWORD_WHILE) {

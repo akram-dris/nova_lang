@@ -3,7 +3,7 @@
 #include <vector>
 
 enum class TokenType {
-    PRINT,
+    SHOW,
     STRING,
     NUMBER,
     IDENTIFIER,

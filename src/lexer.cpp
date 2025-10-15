@@ -37,8 +37,8 @@ Token Lexer::readIdentifierOrKeyword() {
     while (std::isalnum(peek()) || peek() == '_') {
         value += advance();
     }
-    if (value == "print")
-        return { TokenType::PRINT, value };
+    if (value == "show")
+        return { TokenType::SHOW, value };
     if (value == "num")
         return { TokenType::KEYWORD_NUM, value };
     if (value == "string")
