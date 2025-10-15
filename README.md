@@ -86,9 +86,7 @@ To get started with the Nova language, you'll need a C++ compiler (like g++) ins
 
 ### Linux & macOS
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/your-username/nova_lang.git # Replace with actual repo URL
+git clone https://github.com/akram-dris/nova_lang.git
     cd nova_lang
     ```
 
