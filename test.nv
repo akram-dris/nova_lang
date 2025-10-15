@@ -34,23 +34,23 @@ fun:num add a:num b:num start
     return a + b
 end
 
-result:num = add(3, 4)
+result:num = add a:3 b:4
 show result
 
 fun:num factorial n:num start
     if n == 0 start
         return 1
     end
-    return n * factorial(n - 1)
+    return n * factorial n:(n - 1)
 end
 
-show factorial(5)
+show factorial n:5
 
 fun:string greet name:string start
     return "Hello, " + name
 end
 
-show greet("Nova")
+show greet name:"Nova"
 
 if 1 != 2 start
     show "1 != 2 is true"
@@ -115,7 +115,7 @@ show num_to_float
 // show float_to_num
 
 // char_to_num:num = 'B' // Error: undefined variable 'char_to_num'
-// show char_to_num
+// show char_to_char
 
 // num_to_char:char = 67 // Error: cannot convert to char
 // show num_to_char
@@ -129,3 +129,10 @@ end
 // end // Error: comparison can only be performed on numbers or floats.
 
 show 10 / 0
+
+fun:num multiply a:num b:num c:num = 1 start
+    return a * b * c
+end
+
+show multiply a:2 b:3          // c should default to 1
+show multiply a:2 b:3 c:4      // c is explicitly 4

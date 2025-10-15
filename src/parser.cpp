@@ -99,15 +99,12 @@ Value Parser::parseFactor() {
             return Value(token.value[0]);
 
         } else if (token.type == TokenType::IDENTIFIER) {
-
-            if (peek().type == TokenType::LEFT_PAREN) {
-
+            // Check if the identifier is a known function
+            if (functions.count(token.value)) {
                 return handleFunctionCall(token.value);
-
             }
-
+            // Otherwise, it's a variable
             return getVariable(token.value);
-
         } else {
 
             throw RuntimeError("Syntax error: expected number, string, boolean, char, or identifier. Received token type: " + std::to_string(static_cast<int>(token.type)));
@@ -132,23 +129,21 @@ Value Parser::parseTerm() {
 
         if (op.type == TokenType::STAR) {
             if (promote_to_float) {
-                return Value(f_result * f_rhs);
+                result = Value(f_result * f_rhs);
             } else {
                 result.i_value *= rhs.i_value;
-                return result;
             }
         } else if (op.type == TokenType::SLASH) {
             if (promote_to_float) {
                 if (f_rhs == 0.0f) {
                     throw RuntimeError("Division by zero.");
                 }
-                return Value(f_result / f_rhs);
+                result = Value(f_result / f_rhs);
             } else {
                 if (rhs.i_value == 0) {
                     throw RuntimeError("Division by zero.");
                 }
                 result.i_value /= rhs.i_value;
-                return result;
             }
         }
     }
@@ -431,10 +426,18 @@ void Parser::handleFunctionDeclaration() {
             throw RuntimeError("Syntax error: expected ':' after parameter name");
         }
         Token param_type = advance();
-        if (param_type.type != TokenType::IDENTIFIER && param_type.type != TokenType::KEYWORD_STRING && param_type.type != TokenType::KEYWORD_NUM && param_type.type != TokenType::KEYWORD_BOOL) {
+        if (param_type.type != TokenType::IDENTIFIER && param_type.type != TokenType::KEYWORD_STRING && param_type.type != TokenType::KEYWORD_NUM && param_type.type != TokenType::KEYWORD_BOOL && param_type.type != TokenType::KEYWORD_FLOAT && param_type.type != TokenType::KEYWORD_CHAR) {
             throw RuntimeError("Syntax error: expected parameter type");
         }
-        func.parameters.push_back({param_name.value, param_type.value});
+
+        bool current_has_default_value = false;
+        Value current_default_value;
+        if (peek().type == TokenType::EQUAL) {
+            advance(); // consume '='
+            current_default_value = parseExpression();
+            current_has_default_value = true;
+        }
+        func.parameters.push_back(Parameter(param_name.value, param_type.value, current_has_default_value, current_default_value));
     }
 
     if (peek().type != TokenType::KEYWORD_START) {
@@ -463,22 +466,38 @@ void Parser::handleReturnStatement() {
 }
 
 Value Parser::handleFunctionCall(const std::string& name) {
-    advance(); // skip '('
     if (!functions.count(name)) {
         throw RuntimeError("Undefined function '" + name + "'");
     }
 
     Function func = functions[name];
-    std::vector<Value> args;
-    while (peek().type != TokenType::RIGHT_PAREN) {
-        args.push_back(parseExpression());
-        if (peek().type == TokenType::COMMA) {
-            advance();
+    std::unordered_map<std::string, Value> named_args;
+
+    // Parse named arguments: identifier : expression
+    while (peek().type == TokenType::IDENTIFIER && peekNextToken().type == TokenType::COLON) {
+        Token param_name_token = advance(); // Consume parameter name (e.g., 'a')
+        advance(); // Consume COLON ':'
+
+        Value arg_value = parseExpression(); // Parse the argument value (e.g., '3')
+        named_args[param_name_token.value] = arg_value;
+    }
+
+    std::vector<Value> ordered_args;
+    ordered_args.reserve(func.parameters.size()); // Pre-allocate space
+
+    // Populate ordered_args based on function's parameter definition order
+    for (const auto& param : func.parameters) {
+        if (named_args.count(param.name)) {
+            ordered_args.push_back(named_args[param.name]);
+        } else if (param.has_default_value) { // Check for default value
+            ordered_args.push_back(param.default_value);
+        } else {
+            throw RuntimeError("Missing argument for parameter '" + param.name + "' in function '" + name + "'");
         }
     }
-    advance(); // skip ')'
 
-    if (args.size() != func.parameters.size()) {
+    if (ordered_args.size() != func.parameters.size()) {
+        // This check should ideally be covered by the loop above, but good for safety.
         throw RuntimeError("Incorrect number of arguments for function '" + name + "'");
     }
 
@@ -488,7 +507,7 @@ Value Parser::handleFunctionCall(const std::string& name) {
 
     // Set up the function's local variables
     for (size_t i = 0; i < func.parameters.size(); ++i) {
-        func_parser.setVariable(func.parameters[i].name, args[i]);
+        func_parser.setVariable(func.parameters[i].name, ordered_args[i]);
     }
 
     // Execute the function body

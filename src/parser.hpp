@@ -15,6 +15,12 @@ public:
 struct Parameter {
     std::string name;
     std::string type;
+    bool has_default_value = false;
+    Value default_value;
+
+    // Explicit constructor
+    Parameter(std::string name, std::string type, bool has_default_value = false, Value default_value = Value())
+        : name(std::move(name)), type(std::move(type)), has_default_value(has_default_value), default_value(std::move(default_value)) {}
 };
 
 struct Function {

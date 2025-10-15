@@ -14,6 +14,7 @@ The official **Supernova Compiler** is a **C++11 implementation** that parses, c
 * **Beginner-friendly syntax** — simple, intuitive, and readable.
 * **Core data types:** `num`, `string`, `bool`, `float`, `char`.
 * **Control structures:** `if`, `while`, and function support.
+* **Optional parameters:** Functions can define parameters with default values.
 * **Cross-platform support:** Linux, macOS, and Windows.
 * **Educational focus:** teaches compiler concepts in a hands-on way.
 
@@ -55,8 +56,16 @@ fun:num add a:num b:num start
     return a + b
 end
 
-result:num = add(3, 4)
+result:num = add a:3 b:4
 show result
+
+// Function with optional parameter
+fun:num multiply a:num b:num c:num = 1 start
+    return a * b * c
+end
+
+show multiply a:2 b:3          // c defaults to 1 (result: 6)
+show multiply a:2 b:3 c:4      // c is 4 (result: 24)
 ```
 
 ---
