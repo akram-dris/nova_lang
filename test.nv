@@ -20,13 +20,13 @@ end
 
 if y == 10 start
     show "y is 10"
-end else start
+end else
     show "y is not 10"
 end
 
 if x > y start
     show "x is greater than y"
-end else start
+end else
     show "x is not greater than y"
 end
 

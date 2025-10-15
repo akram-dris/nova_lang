@@ -233,17 +233,9 @@ void Parser::handleIfStatement() {
         parseBlock();
         if (peek().type == TokenType::KEYWORD_ELSE) {
             advance(); // skip 'else'
-            if (advance().type != TokenType::KEYWORD_START) {
-                std::cerr << "Syntax error: expected 'start' after 'else'\n";
-                return;
-            }
-            // skip the else block
-            int start_level = 1;
-            while (start_level > 0 && peek().type != TokenType::END_OF_FILE) {
-                Token t = advance();
-                if (t.type == TokenType::KEYWORD_START) start_level++;
-                if (t.type == TokenType::KEYWORD_END) start_level--;
-            }
+            // The else block does not have its own 'start' keyword
+            // It directly follows 'else' and is terminated by the 'end' of the if statement
+            parseBlock();
         }
     } else {
         // skip the if block
@@ -255,10 +247,8 @@ void Parser::handleIfStatement() {
         }
         if (peek().type == TokenType::KEYWORD_ELSE) {
             advance(); // skip 'else'
-            if (advance().type != TokenType::KEYWORD_START) {
-                std::cerr << "Syntax error: expected 'start' after 'else'\n";
-                return;
-            }
+            // The else block does not have its own 'start' keyword
+            // It directly follows 'else' and is terminated by the 'end' of the if statement
             parseBlock();
         }
     }
