@@ -1,6 +1,6 @@
-x:int = 3
+x:num = 3
 show x
-y:int = x + 7
+y:num = x + 7
 show y
 show y - x
 show 2 * 3 + 4
@@ -30,14 +30,14 @@ end else
     show "x is not greater than y"
 end
 
-fun:int add a:int b:int start
+fun:num add a:num b:num start
     return a + b
 end
 
-result:int = add(3, 4)
+result:num = add(3, 4)
 show result
 
-fun:int factorial n:int start
+fun:num factorial n:num start
     if n == 0 start
         return 1
     end
@@ -74,9 +74,58 @@ end
 
 show 1 > 2
 
-akram:int = 0
+akram:num = 0
 while akram < 3 start
     show akram
     akram = akram + 1
 end
 
+
+// New float and char tests
+
+pi:float = 3.14
+show pi
+
+radius:float = 2.0
+area:float = pi * radius
+show area
+
+grade:char = 'A'
+show grade
+
+initial:char = 'J'
+show initial
+
+sum_float:float = 10.5 + 2.3
+show sum_float
+
+diff_float:float = 10.0 - 3.5
+show diff_float
+
+product_float:float = 2.5 * 4.0
+show product_float
+
+div_float:float = 10.0 / 2.5
+show div_float
+
+num_to_float:float = 5
+show num_to_float
+
+// float_to_num:num = 7.8 // Error: cannot convert to num
+// show float_to_num
+
+// char_to_num:num = 'B' // Error: undefined variable 'char_to_num'
+// show char_to_num
+
+// num_to_char:char = 67 // Error: cannot convert to char
+// show num_to_char
+
+if pi > 3.0 start
+    show "Pi is greater than 3.0"
+end
+
+// if grade == 'A' start
+//     show "Grade is A"
+// end // Error: comparison can only be performed on numbers or floats.
+
+show 10 / 0

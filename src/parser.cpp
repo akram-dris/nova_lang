@@ -51,8 +51,7 @@ Value Parser::getVariable(const std::string& name) {
             return (*it)[name];
         }
     }
-    std::cerr << "Error: undefined variable '" << name << "'\n";
-    return Value();
+    throw RuntimeError("Undefined variable '" + name + "'");
 }
 
 bool Parser::parseCondition() {
@@ -64,30 +63,56 @@ bool Parser::parseCondition() {
     } else if (result.type == ValueType::STRING) {
         return !result.s_value.empty();
     }
-    std::cerr << "Error: condition must be a boolean, number, or string.\n";
-    return false;
+    throw RuntimeError("Condition must be a boolean, number, or string.");
 }
 
 Value Parser::parseFactor() {
+
     Token token = advance();
+
     if (token.type == TokenType::NUMBER) {
-        return Value(std::stoi(token.value));
-    } else if (token.type == TokenType::STRING) {
-        return Value(token.value);
-    } else if (token.type == TokenType::KEYWORD_TRUE) {
-        return Value(true);
-    } else if (token.type == TokenType::KEYWORD_FALSE) {
-        return Value(false);
-    }
-    else if (token.type == TokenType::IDENTIFIER) {
-        if (peek().type == TokenType::LEFT_PAREN) {
-            return handleFunctionCall(token.value);
+
+        if (token.value.find('.') != std::string::npos) {
+
+            return Value(std::stof(token.value));
+
+        } else {
+
+            return Value(std::stoi(token.value));
+
         }
-        return getVariable(token.value);
-    } else {
-        std::cerr << "Syntax error: expected number, string, boolean, or identifier\n";
-        return Value();
-    }
+
+    } else if (token.type == TokenType::STRING) {
+
+        return Value(token.value);
+
+    } else if (token.type == TokenType::KEYWORD_TRUE) {
+
+        return Value(true);
+
+    } else if (token.type == TokenType::KEYWORD_FALSE) {
+
+        return Value(false);
+
+        } else if (token.type == TokenType::CHAR) {
+
+            return Value(token.value[0]);
+
+        } else if (token.type == TokenType::IDENTIFIER) {
+
+            if (peek().type == TokenType::LEFT_PAREN) {
+
+                return handleFunctionCall(token.value);
+
+            }
+
+            return getVariable(token.value);
+
+        } else {
+
+            throw RuntimeError("Syntax error: expected number, string, boolean, char, or identifier. Received token type: " + std::to_string(static_cast<int>(token.type)));
+
+        }
 }
 
 Value Parser::parseTerm() {
@@ -97,19 +122,34 @@ Value Parser::parseTerm() {
         Token op = advance();
         Value rhs = parseFactor();
 
-        if (result.type != ValueType::NUMBER || rhs.type != ValueType::NUMBER) {
-            std::cerr << "Error: arithmetic operations can only be performed on numbers.\n";
-            return Value();
-        }
+        if ((result.type != ValueType::NUMBER && result.type != ValueType::FLOAT) || (rhs.type != ValueType::NUMBER && rhs.type != ValueType::FLOAT)) {
+                    throw RuntimeError("Arithmetic operations can only be performed on numbers or floats.");        }
+
+        // Promote to float if either operand is float
+        bool promote_to_float = (result.type == ValueType::FLOAT || rhs.type == ValueType::FLOAT);
+        float f_result = (promote_to_float && result.type == ValueType::NUMBER) ? static_cast<float>(result.i_value) : result.f_value;
+        float f_rhs = (promote_to_float && rhs.type == ValueType::NUMBER) ? static_cast<float>(rhs.i_value) : rhs.f_value;
 
         if (op.type == TokenType::STAR) {
-            result.i_value *= rhs.i_value;
-        } else if (op.type == TokenType::SLASH) {
-            if (rhs.i_value == 0) {
-                std::cerr << "Error: Division by zero.\n";
-                return Value();
+            if (promote_to_float) {
+                return Value(f_result * f_rhs);
+            } else {
+                result.i_value *= rhs.i_value;
+                return result;
             }
-            result.i_value /= rhs.i_value;
+        } else if (op.type == TokenType::SLASH) {
+            if (promote_to_float) {
+                if (f_rhs == 0.0f) {
+                    throw RuntimeError("Division by zero.");
+                }
+                return Value(f_result / f_rhs);
+            } else {
+                if (rhs.i_value == 0) {
+                    throw RuntimeError("Division by zero.");
+                }
+                result.i_value /= rhs.i_value;
+                return result;
+            }
         }
     }
     return result;
@@ -129,36 +169,53 @@ Value Parser::parseExpression() {
         if (op.type == TokenType::PLUS) {
             if (result.type == ValueType::NUMBER && rhs.type == ValueType::NUMBER) {
                 result.i_value += rhs.i_value;
+            } else if (result.type == ValueType::FLOAT && rhs.type == ValueType::FLOAT) {
+                result.f_value += rhs.f_value;
+            } else if (result.type == ValueType::NUMBER && rhs.type == ValueType::FLOAT) {
+                result.f_value = static_cast<float>(result.i_value) + rhs.f_value;
+                result.type = ValueType::FLOAT;
+            } else if (result.type == ValueType::FLOAT && rhs.type == ValueType::NUMBER) {
+                result.f_value += static_cast<float>(rhs.i_value);
             } else if (result.type == ValueType::STRING && rhs.type == ValueType::STRING) {
                 result.s_value += rhs.s_value;
             } else {
-                std::cerr << "Error: invalid operands for + operator.\n";
-                return Value();
+                throw RuntimeError("Invalid operands for + operator.");
             }
         } else if (op.type == TokenType::MINUS) {
             if (result.type == ValueType::NUMBER && rhs.type == ValueType::NUMBER) {
                 result.i_value -= rhs.i_value;
+            } else if (result.type == ValueType::FLOAT && rhs.type == ValueType::FLOAT) {
+                result.f_value -= rhs.f_value;
+            } else if (result.type == ValueType::NUMBER && rhs.type == ValueType::FLOAT) {
+                result.f_value = static_cast<float>(result.i_value) - rhs.f_value;
+                result.type = ValueType::FLOAT;
+            } else if (result.type == ValueType::FLOAT && rhs.type == ValueType::NUMBER) {
+                result.f_value -= static_cast<float>(rhs.i_value);
             } else {
-                std::cerr << "Error: invalid operands for - operator.\n";
-                return Value();
+                throw RuntimeError("Invalid operands for - operator.");
             }
         } else { 
-             if (result.type != ValueType::NUMBER || rhs.type != ValueType::NUMBER) {
-                std::cerr << "Error: comparison can only be performed on numbers.\n";
-                return Value(false);
+            // Comparison operators
+            if ((result.type != ValueType::NUMBER && result.type != ValueType::FLOAT) || (rhs.type != ValueType::NUMBER && rhs.type != ValueType::FLOAT)) {
+                throw RuntimeError("Comparison can only be performed on numbers or floats.");
             }
+
+            bool promote_to_float = (result.type == ValueType::FLOAT || rhs.type == ValueType::FLOAT);
+            float f_result = (promote_to_float && result.type == ValueType::NUMBER) ? static_cast<float>(result.i_value) : result.f_value;
+            float f_rhs = (promote_to_float && rhs.type == ValueType::NUMBER) ? static_cast<float>(rhs.i_value) : rhs.f_value;
+
             if (op.type == TokenType::EQUAL_EQUAL) {
-                return Value(result.i_value == rhs.i_value);
+                return Value(f_result == f_rhs);
             } else if (op.type == TokenType::NOT_EQUAL) {
-                return Value(result.i_value != rhs.i_value);
+                return Value(f_result != f_rhs);
             } else if (op.type == TokenType::GREATER) {
-                return Value(result.i_value > rhs.i_value);
+                return Value(f_result > f_rhs);
             } else if (op.type == TokenType::GREATER_EQUAL) {
-                return Value(result.i_value >= rhs.i_value);
+                return Value(f_result >= f_rhs);
             } else if (op.type == TokenType::LESS) {
-                return Value(result.i_value < rhs.i_value);
+                return Value(f_result < f_rhs);
             } else if (op.type == TokenType::LESS_EQUAL) {
-                return Value(result.i_value <= rhs.i_value);
+                return Value(f_result <= f_rhs);
             }
         }
     }
@@ -174,6 +231,10 @@ void Parser::handleShow() {
         std::cout << value.s_value << std::endl;
     } else if (value.type == ValueType::BOOLEAN) {
         std::cout << (value.b_value ? "true" : "false") << std::endl;
+    } else if (value.type == ValueType::FLOAT) {
+        std::cout << value.f_value << std::endl;
+    } else if (value.type == ValueType::CHAR) {
+        std::cout << value.c_value << std::endl;
     }
 }
 
@@ -181,16 +242,53 @@ void Parser::handleVariableDeclaration() {
     Token name = advance(); // consume the identifier
     advance(); // consume the ':'
     Token type = advance();
-    if (type.type != TokenType::IDENTIFIER && type.type != TokenType::KEYWORD_NUM && type.type != TokenType::KEYWORD_STRING && type.type != TokenType::KEYWORD_BOOL) {
-        std::cerr << "Syntax error: expected type annotation\n";
-        return;
+    if (type.type != TokenType::IDENTIFIER && type.type != TokenType::KEYWORD_NUM && type.type != TokenType::KEYWORD_STRING && type.type != TokenType::KEYWORD_BOOL && type.type != TokenType::KEYWORD_FLOAT && type.type != TokenType::KEYWORD_CHAR) {
+        throw RuntimeError("Syntax error: expected type annotation");
     }
     if (advance().type != TokenType::EQUAL) {
-        std::cerr << "Syntax error: expected '=' after type annotation\n";
-        return;
+        throw RuntimeError("Syntax error: expected '=' after type annotation");
     }
     Value value = parseExpression();
-    setVariable(name.value, value);
+    
+    // Type checking and conversion
+    if (type.type == TokenType::KEYWORD_NUM) {
+        if (value.type == ValueType::NUMBER) {
+            setVariable(name.value, value);
+        } else if (value.type == ValueType::FLOAT) {
+            setVariable(name.value, Value(static_cast<int>(value.f_value)));
+        } else {
+            throw RuntimeError("Error: cannot convert to num");
+        }
+    } else if (type.type == TokenType::KEYWORD_STRING) {
+        if (value.type == ValueType::STRING) {
+            setVariable(name.value, value);
+        } else {
+            throw RuntimeError("Error: cannot convert to string");
+        }
+    } else if (type.type == TokenType::KEYWORD_BOOL) {
+        if (value.type == ValueType::BOOLEAN) {
+            setVariable(name.value, value);
+        } else {
+            throw RuntimeError("Error: cannot convert to bool");
+        }
+    } else if (type.type == TokenType::KEYWORD_FLOAT) {
+        if (value.type == ValueType::FLOAT) {
+            setVariable(name.value, value);
+        } else if (value.type == ValueType::NUMBER) {
+            setVariable(name.value, Value(static_cast<float>(value.i_value)));
+        } else {
+            throw RuntimeError("Error: cannot convert to float");
+        }
+    } else if (type.type == TokenType::KEYWORD_CHAR) {
+        if (value.type == ValueType::CHAR) {
+            setVariable(name.value, value);
+        } else {
+            throw RuntimeError("Error: cannot convert to char");
+        }
+    } else {
+        // For IDENTIFIER type (e.g., custom types), direct assignment for now
+        setVariable(name.value, value);
+    }
 }
 
 void Parser::handleAssignmentStatement() {
@@ -216,8 +314,7 @@ void Parser::handleIfStatement() {
     advance(); // skip 'if'
     Value condition = parseExpression();
     if (advance().type != TokenType::KEYWORD_START) {
-        std::cerr << "Syntax error: expected 'start' after condition\n";
-        return;
+        throw RuntimeError("Syntax error: expected 'start' after condition");
     }
 
     bool is_true = false;
@@ -256,6 +353,7 @@ void Parser::handleIfStatement() {
 
 void Parser::handleWhileStatement() {
     advance(); // skip 'while'
+
     
     // Store the current position to jump back to for the loop
     size_t condition_start_pos = pos;
@@ -264,17 +362,20 @@ void Parser::handleWhileStatement() {
     while (true) {
         // Reset position to evaluate the condition
         pos = condition_start_pos;
+    
         if (!parseCondition()) {
+
             break; // Exit loop if condition is false
         }
 
         if (peek().type != TokenType::KEYWORD_START) {
-            std::cerr << "Syntax error: expected 'start' after while condition\n";
-            return;
+            throw RuntimeError("Syntax error: expected 'start' after while condition");
         }
         advance(); // skip 'start'
 
+
         parseBlock();
+
 
         if (is_returning) { // Handle return inside loop
             return;
@@ -298,24 +399,24 @@ void Parser::handleWhileStatement() {
             if (t.type == TokenType::KEYWORD_END) start_level--;
         }
     }
+
 }
+
+
 
 void Parser::handleFunctionDeclaration() {
     advance(); // skip 'fun'
     if (advance().type != TokenType::COLON) {
-        std::cerr << "Syntax error: expected ':' after 'fun'\n";
-        return;
+        throw RuntimeError("Syntax error: expected ':' after 'fun'");
     }
     Token return_type = advance();
     if (return_type.type != TokenType::IDENTIFIER && return_type.type != TokenType::KEYWORD_STRING && return_type.type != TokenType::KEYWORD_NUM && return_type.type != TokenType::KEYWORD_BOOL) {
-        std::cerr << "Syntax error: expected return type\n";
-        return;
+        throw RuntimeError("Syntax error: expected return type");
     }
 
     Token name = advance();
     if (name.type != TokenType::IDENTIFIER) {
-        std::cerr << "Syntax error: expected function name\n";
-        return;
+        throw RuntimeError("Syntax error: expected function name");
     }
 
     Function func;
@@ -324,24 +425,20 @@ void Parser::handleFunctionDeclaration() {
     while (peek().type != TokenType::KEYWORD_START && peek().type != TokenType::END_OF_FILE) {
         Token param_name = advance();
         if (param_name.type != TokenType::IDENTIFIER) {
-            std::cerr << "Syntax error: expected parameter name\n";
-            return;
+            throw RuntimeError("Syntax error: expected parameter name");
         }
         if (advance().type != TokenType::COLON) {
-            std::cerr << "Syntax error: expected ':' after parameter name\n";
-            return;
+            throw RuntimeError("Syntax error: expected ':' after parameter name");
         }
         Token param_type = advance();
         if (param_type.type != TokenType::IDENTIFIER && param_type.type != TokenType::KEYWORD_STRING && param_type.type != TokenType::KEYWORD_NUM && param_type.type != TokenType::KEYWORD_BOOL) {
-            std::cerr << "Syntax error: expected parameter type\n";
-            return;
+            throw RuntimeError("Syntax error: expected parameter type");
         }
         func.parameters.push_back({param_name.value, param_type.value});
     }
 
     if (peek().type != TokenType::KEYWORD_START) {
-        std::cerr << "Syntax error: expected 'start' before function body\n";
-        return;
+        throw RuntimeError("Syntax error: expected 'start' before function body");
     }
     advance(); // consume 'start'
 
@@ -368,8 +465,7 @@ void Parser::handleReturnStatement() {
 Value Parser::handleFunctionCall(const std::string& name) {
     advance(); // skip '('
     if (!functions.count(name)) {
-        std::cerr << "Error: undefined function '" << name << "'\n";
-        return Value();
+        throw RuntimeError("Undefined function '" + name + "'");
     }
 
     Function func = functions[name];
@@ -383,8 +479,7 @@ Value Parser::handleFunctionCall(const std::string& name) {
     advance(); // skip ')'
 
     if (args.size() != func.parameters.size()) {
-        std::cerr << "Error: incorrect number of arguments for function '" << name << "'\n";
-        return Value();
+        throw RuntimeError("Incorrect number of arguments for function '" + name + "'");
     }
 
     // Create a new parser for the function body

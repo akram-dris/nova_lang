@@ -17,8 +17,13 @@ int main(int argc, char** argv) {
     Lexer lexer(buffer.str());
     auto tokens = lexer.tokenize();
 
-    Parser parser(tokens);
-    parser.run();
+    try {
+        Parser parser(tokens);
+        parser.run();
+    } catch (const RuntimeError& e) {
+        std::cerr << "Runtime Error: " << e.what() << std::endl;
+        return 1;
+    }
 
     return 0;
 }

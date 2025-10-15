@@ -10,6 +10,8 @@ enum class TokenType {
     KEYWORD_NUM,
     KEYWORD_STRING,
     KEYWORD_BOOL,
+    KEYWORD_FLOAT,
+    KEYWORD_CHAR,
     KEYWORD_TRUE,
     KEYWORD_FALSE,
     KEYWORD_IF,
@@ -30,14 +32,13 @@ enum class TokenType {
     LESS_EQUAL,
     LEFT_PAREN, 
     RIGHT_PAREN,
-    LEFT_BRACE,
-    RIGHT_BRACE,
     PLUS,
     MINUS,
     STAR,
     SLASH,
     END_OF_FILE,
-    UNKNOWN
+    UNKNOWN,
+    CHAR
 };
 
 struct Token {
@@ -61,4 +62,6 @@ private:
     Token readString();
     Token readIdentifierOrKeyword();
     Token readNumber();
+    Token readChar();
+    void skipComment();
 };

@@ -5,6 +5,13 @@
 #include <unordered_map>
 #include <string>
 
+#include <stdexcept>
+
+class RuntimeError : public std::runtime_error {
+public:
+    explicit RuntimeError(const std::string& message) : std::runtime_error(message) {}
+};
+
 struct Parameter {
     std::string name;
     std::string type;

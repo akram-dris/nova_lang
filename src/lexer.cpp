@@ -22,6 +22,15 @@ void Lexer::skipWhitespace() {
     while (std::isspace(peek())) advance();
 }
 
+void Lexer::skipComment() {
+    while (peek() != '\n' && peek() != '\0') {
+        advance();
+    }
+    if (peek() == '\n') {
+        advance(); // consume the newline
+    }
+}
+
 Token Lexer::readString() {
     advance(); // skip opening quote
     std::string value;
@@ -45,6 +54,10 @@ Token Lexer::readIdentifierOrKeyword() {
         return { TokenType::KEYWORD_STRING, value };
     if (value == "bool")
         return { TokenType::KEYWORD_BOOL, value };
+    if (value == "float")
+        return { TokenType::KEYWORD_FLOAT, value };
+    if (value == "char")
+        return { TokenType::KEYWORD_CHAR, value };
     if (value == "true")
         return { TokenType::KEYWORD_TRUE, value };
     if (value == "false")
@@ -71,7 +84,24 @@ Token Lexer::readNumber() {
     while (std::isdigit(peek())) {
         value += advance();
     }
+    if (peek() == '.') {
+        value += advance(); // consume '.'
+        while (std::isdigit(peek())) {
+            value += advance();
+        }
+    }
     return { TokenType::NUMBER, value };
+}
+
+Token Lexer::readChar() {
+    advance(); // skip opening single quote
+    char c = advance(); // read the character
+    if (peek() != '\'') {
+        // Error: expected closing single quote
+        return { TokenType::UNKNOWN, "" };
+    }
+    advance(); // skip closing single quote
+    return { TokenType::CHAR, std::string(1, c) };
 }
 
 std::vector<Token> Lexer::tokenize() {
@@ -87,6 +117,8 @@ std::vector<Token> Lexer::tokenize() {
             tokens.push_back(readIdentifierOrKeyword());
         else if (std::isdigit(c))
             tokens.push_back(readNumber());
+        else if (c == '\'')
+            tokens.push_back(readChar());
         else if (c == '=') {
             if (peekNext() == '=') {
                 advance(); advance();
@@ -109,8 +141,13 @@ std::vector<Token> Lexer::tokenize() {
             tokens.push_back({ TokenType::STAR, "*" });
         }
         else if (c == '/') {
-            advance();
-            tokens.push_back({ TokenType::SLASH, "/" });
+            if (peekNext() == '/') {
+                skipComment();
+                continue; // Continue to the next token after skipping comment
+            } else {
+                advance();
+                tokens.push_back({ TokenType::SLASH, "/" });
+            }
         }
         else if (c == '<') {
             if (peekNext() == '=') {
