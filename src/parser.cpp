@@ -32,6 +32,19 @@ void Parser::exitScope() {
     }
 }
 
+void Parser::setVariable(const std::string& name, const Value& value) {
+    for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
+        if (it->count(name)) {
+            (*it)[name] = value;
+            return;
+        }
+    }
+    // If not found in any parent scope, set in current scope
+    if (!scopes.empty()) {
+        scopes.back()[name] = value;
+    }
+}
+
 Value Parser::getVariable(const std::string& name) {
     for (auto it = scopes.rbegin(); it != scopes.rend(); ++it) {
         if (it->count(name)) {
@@ -42,10 +55,17 @@ Value Parser::getVariable(const std::string& name) {
     return Value();
 }
 
-void Parser::setVariable(const std::string& name, const Value& value) {
-    if (!scopes.empty()) {
-        scopes.back()[name] = value;
+bool Parser::parseCondition() {
+    Value result = parseExpression();
+    if (result.type == ValueType::BOOLEAN) {
+        return result.b_value;
+    } else if (result.type == ValueType::NUMBER) {
+        return result.i_value != 0;
+    } else if (result.type == ValueType::STRING) {
+        return !result.s_value.empty();
     }
+    std::cerr << "Error: condition must be a boolean, number, or string.\n";
+    return false;
 }
 
 Value Parser::parseFactor() {
@@ -58,7 +78,8 @@ Value Parser::parseFactor() {
         return Value(true);
     } else if (token.type == TokenType::KEYWORD_FALSE) {
         return Value(false);
-    } else if (token.type == TokenType::IDENTIFIER) {
+    }
+    else if (token.type == TokenType::IDENTIFIER) {
         if (peek().type == TokenType::LEFT_PAREN) {
             return handleFunctionCall(token.value);
         }
@@ -172,6 +193,13 @@ void Parser::handleVariableDeclaration() {
     setVariable(name.value, value);
 }
 
+void Parser::handleAssignmentStatement() {
+    Token name = advance(); // consume the identifier (variable name)
+    advance(); // consume the '='
+    Value value = parseExpression();
+    setVariable(name.value, value);
+}
+
 void Parser::parseBlock() {
     enterScope();
     while (peek().type != TokenType::RIGHT_BRACE && peek().type != TokenType::END_OF_FILE) {
@@ -232,6 +260,66 @@ void Parser::handleIfStatement() {
                 return;
             }
             parseBlock();
+        }
+    }
+}
+
+void Parser::handleWhileStatement() {
+    advance(); // skip 'while'
+    if (peek().type != TokenType::LEFT_PAREN) {
+        std::cerr << "Syntax error: expected '(' after 'while'\n";
+        return;
+    }
+    advance(); // skip '('
+    
+    // Store the current position to jump back to for the loop
+    size_t condition_start_pos = pos;
+
+    // Keep looping as long as the condition is true
+    while (true) {
+        // Reset position to evaluate the condition
+        pos = condition_start_pos;
+        if (!parseCondition()) {
+            break; // Exit loop if condition is false
+        }
+
+        if (peek().type != TokenType::RIGHT_PAREN) {
+            std::cerr << "Syntax error: expected ')' after while condition\n";
+            return;
+        }
+        advance(); // skip ')'
+
+        if (peek().type != TokenType::LEFT_BRACE) {
+            std::cerr << "Syntax error: expected '{' after while condition\n";
+            return;
+        }
+        advance(); // skip '{'
+
+        parseBlock();
+
+        if (is_returning) { // Handle return inside loop
+            return;
+        }
+    }
+
+    // After the loop, skip the condition and the block
+    // First, skip the condition part
+    pos = condition_start_pos;
+    // Find the matching ')' for the condition
+    int paren_level = 1;
+    while (paren_level > 0 && peek().type != TokenType::END_OF_FILE) {
+        Token t = advance();
+        if (t.type == TokenType::LEFT_PAREN) paren_level++;
+        if (t.type == TokenType::RIGHT_PAREN) paren_level--;
+    }
+
+    if (peek().type == TokenType::LEFT_BRACE) {
+        advance(); // skip '{'
+        int brace_level = 1;
+        while (brace_level > 0 && peek().type != TokenType::END_OF_FILE) {
+            Token t = advance();
+            if (t.type == TokenType::LEFT_BRACE) brace_level++;
+            if (t.type == TokenType::RIGHT_BRACE) brace_level--;
         }
     }
 }
@@ -349,14 +437,23 @@ void Parser::run_single_statement() {
         handlePrint();
     } else if (current.type == TokenType::KEYWORD_IF) {
         handleIfStatement();
+    } else if (current.type == TokenType::KEYWORD_WHILE) {
+        handleWhileStatement();
     } else if (current.type == TokenType::KEYWORD_FUN) {
         handleFunctionDeclaration();
     } else if (current.type == TokenType::KEYWORD_RETURN) {
         handleReturnStatement();
-    } else if (current.type == TokenType::IDENTIFIER && peekNextToken().type == TokenType::COLON) {
-        handleVariableDeclaration();
+    } else if (current.type == TokenType::IDENTIFIER) {
+        if (peekNextToken().type == TokenType::COLON) {
+            handleVariableDeclaration();
+        } else if (peekNextToken().type == TokenType::EQUAL) {
+            handleAssignmentStatement();
+        } else {
+            // Expression statement (e.g., function call or just an identifier)
+            parseExpression();
+        }
     } else {
-        // Expression statement
+        // Fallback for other expression statements that don't start with IDENTIFIER
         parseExpression();
     }
 }

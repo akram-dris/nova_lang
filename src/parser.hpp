@@ -45,6 +45,7 @@ private:
     void handleFunctionDeclaration();
     void handleReturnStatement();
     Value handleFunctionCall(const std::string& name);
+    void handleAssignmentStatement();
     void parseBlock();
     bool parseCondition();
     Value parseFactor();
