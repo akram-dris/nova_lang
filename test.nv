@@ -14,69 +14,69 @@ print name
 print "Hello, " + name
 print "hello" + " " + "world"
 
-if x > 2 {
+if x > 2 start
     print "x is greater than 2"
-}
+end
 
-if y == 10 {
+if y == 10 start
     print "y is 10"
-} else {
+end else start
     print "y is not 10"
-}
+end
 
-if x > y {
+if x > y start
     print "x is greater than y"
-} else {
+end else start
     print "x is not greater than y"
-}
+end
 
-fun:int add a:int b:int {
+fun:int add a:int b:int start
     return a + b
-}
+end
 
 result:int = add(3, 4)
 print result
 
-fun:int factorial n:int {
-    if n == 0 {
+fun:int factorial n:int start
+    if n == 0 start
         return 1
-    }
+    end
     return n * factorial(n - 1)
-}
+end
 
 print factorial(5)
 
-fun:string greet name:string {
+fun:string greet name:string start
     return "Hello, " + name
-}
+end
 
 print greet("Nova")
 
-if 1 != 2 {
+if 1 != 2 start
     print "1 != 2 is true"
-}
+end
 
-if 2 >= 2 {
+if 2 >= 2 start
     print "2 >= 2 is true"
-}
+end
 
-if 1 <= 2 {
+if 1 <= 2 start
     print "1 <= 2 is true"
     print "hello"
-}
+end
 
 is_active:bool = true
 print is_active
 
-if is_active {
+if is_active start
     print "is_active is true"
-}
+end
 
 print 1 > 2
 
 akram:int = 0
-while akram < 3 {
+while akram < 3 start
     print akram
     akram = akram + 1
-}
+end
 

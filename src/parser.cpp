@@ -202,12 +202,12 @@ void Parser::handleAssignmentStatement() {
 
 void Parser::parseBlock() {
     enterScope();
-    while (peek().type != TokenType::RIGHT_BRACE && peek().type != TokenType::END_OF_FILE) {
+    while (peek().type != TokenType::KEYWORD_END && peek().type != TokenType::END_OF_FILE) {
         if (is_returning) break;
         run_single_statement();
     }
-    if (peek().type == TokenType::RIGHT_BRACE) {
-        advance(); // consume '}'
+    if (peek().type == TokenType::KEYWORD_END) {
+        advance(); // consume 'end'
     }
     exitScope();
 }
@@ -215,8 +215,8 @@ void Parser::parseBlock() {
 void Parser::handleIfStatement() {
     advance(); // skip 'if'
     Value condition = parseExpression();
-    if (advance().type != TokenType::LEFT_BRACE) {
-        std::cerr << "Syntax error: expected '{' after condition\n";
+    if (advance().type != TokenType::KEYWORD_START) {
+        std::cerr << "Syntax error: expected 'start' after condition\n";
         return;
     }
 
@@ -233,30 +233,30 @@ void Parser::handleIfStatement() {
         parseBlock();
         if (peek().type == TokenType::KEYWORD_ELSE) {
             advance(); // skip 'else'
-            if (advance().type != TokenType::LEFT_BRACE) {
-                std::cerr << "Syntax error: expected '{' after 'else'\n";
+            if (advance().type != TokenType::KEYWORD_START) {
+                std::cerr << "Syntax error: expected 'start' after 'else'\n";
                 return;
             }
             // skip the else block
-            int brace_level = 1;
-            while (brace_level > 0 && peek().type != TokenType::END_OF_FILE) {
+            int start_level = 1;
+            while (start_level > 0 && peek().type != TokenType::END_OF_FILE) {
                 Token t = advance();
-                if (t.type == TokenType::LEFT_BRACE) brace_level++;
-                if (t.type == TokenType::RIGHT_BRACE) brace_level--;
+                if (t.type == TokenType::KEYWORD_START) start_level++;
+                if (t.type == TokenType::KEYWORD_END) start_level--;
             }
         }
     } else {
         // skip the if block
-        int brace_level = 1;
-        while (brace_level > 0 && peek().type != TokenType::END_OF_FILE) {
+        int start_level = 1;
+        while (start_level > 0 && peek().type != TokenType::END_OF_FILE) {
             Token t = advance();
-            if (t.type == TokenType::LEFT_BRACE) brace_level++;
-            if (t.type == TokenType::RIGHT_BRACE) brace_level--;
+            if (t.type == TokenType::KEYWORD_START) start_level++;
+            if (t.type == TokenType::KEYWORD_END) start_level--;
         }
         if (peek().type == TokenType::KEYWORD_ELSE) {
             advance(); // skip 'else'
-            if (advance().type != TokenType::LEFT_BRACE) {
-                std::cerr << "Syntax error: expected '{' after 'else'\n";
+            if (advance().type != TokenType::KEYWORD_START) {
+                std::cerr << "Syntax error: expected 'start' after 'else'\n";
                 return;
             }
             parseBlock();
@@ -278,11 +278,11 @@ void Parser::handleWhileStatement() {
             break; // Exit loop if condition is false
         }
 
-        if (peek().type != TokenType::LEFT_BRACE) {
-            std::cerr << "Syntax error: expected '{' after while condition\n";
+        if (peek().type != TokenType::KEYWORD_START) {
+            std::cerr << "Syntax error: expected 'start' after while condition\n";
             return;
         }
-        advance(); // skip '{'
+        advance(); // skip 'start'
 
         parseBlock();
 
@@ -294,18 +294,18 @@ void Parser::handleWhileStatement() {
     // After the loop, skip the condition and the block
     // First, skip the condition part
     pos = condition_start_pos;
-    // Find the matching '{' for the block
-    while (peek().type != TokenType::LEFT_BRACE && peek().type != TokenType::END_OF_FILE) {
+    // Find the matching 'start' for the block
+    while (peek().type != TokenType::KEYWORD_START && peek().type != TokenType::END_OF_FILE) {
         advance();
     }
 
-    if (peek().type == TokenType::LEFT_BRACE) {
-        advance(); // skip '{'
-        int brace_level = 1;
-        while (brace_level > 0 && peek().type != TokenType::END_OF_FILE) {
+    if (peek().type == TokenType::KEYWORD_START) {
+        advance(); // skip 'start'
+        int start_level = 1;
+        while (start_level > 0 && peek().type != TokenType::END_OF_FILE) {
             Token t = advance();
-            if (t.type == TokenType::LEFT_BRACE) brace_level++;
-            if (t.type == TokenType::RIGHT_BRACE) brace_level--;
+            if (t.type == TokenType::KEYWORD_START) start_level++;
+            if (t.type == TokenType::KEYWORD_END) start_level--;
         }
     }
 }
@@ -331,7 +331,7 @@ void Parser::handleFunctionDeclaration() {
     Function func;
     func.return_type = return_type.value;
 
-    while (peek().type != TokenType::LEFT_BRACE && peek().type != TokenType::END_OF_FILE) {
+    while (peek().type != TokenType::KEYWORD_START && peek().type != TokenType::END_OF_FILE) {
         Token param_name = advance();
         if (param_name.type != TokenType::IDENTIFIER) {
             std::cerr << "Syntax error: expected parameter name\n";
@@ -349,21 +349,21 @@ void Parser::handleFunctionDeclaration() {
         func.parameters.push_back({param_name.value, param_type.value});
     }
 
-    if (peek().type != TokenType::LEFT_BRACE) {
-        std::cerr << "Syntax error: expected '{' before function body\n";
+    if (peek().type != TokenType::KEYWORD_START) {
+        std::cerr << "Syntax error: expected 'start' before function body\n";
         return;
     }
-    advance(); // consume '{'
+    advance(); // consume 'start'
 
-    int brace_level = 1;
-    while (brace_level > 0 && peek().type != TokenType::END_OF_FILE) {
+    int start_level = 1;
+    while (start_level > 0 && peek().type != TokenType::END_OF_FILE) {
         func.body.push_back(peek());
-        if (peek().type == TokenType::LEFT_BRACE) brace_level++;
-        if (peek().type == TokenType::RIGHT_BRACE) brace_level--;
+        if (peek().type == TokenType::KEYWORD_START) start_level++;
+        if (peek().type == TokenType::KEYWORD_END) start_level--;
         advance();
     }
     if (!func.body.empty()) {
-        func.body.pop_back(); // remove the last '}'
+        func.body.pop_back(); // remove the last 'end'
     }
 
     functions[name.value] = func;

@@ -59,6 +59,10 @@ Token Lexer::readIdentifierOrKeyword() {
         return { TokenType::KEYWORD_FUN, value };
     if (value == "return")
         return { TokenType::KEYWORD_RETURN, value };
+    if (value == "start")
+        return { TokenType::KEYWORD_START, value };
+    if (value == "end")
+        return { TokenType::KEYWORD_END, value };
     return { TokenType::IDENTIFIER, value };
 }
 
@@ -142,14 +146,6 @@ std::vector<Token> Lexer::tokenize() {
         else if (c == ')') {
             advance();
             tokens.push_back({ TokenType::RIGHT_PAREN, ")" });
-        }
-        else if (c == '{') {
-            advance();
-            tokens.push_back({ TokenType::LEFT_BRACE, "{" });
-        }
-        else if (c == '}') {
-            advance();
-            tokens.push_back({ TokenType::RIGHT_BRACE, "}" });
         }
         else if (c == ',') {
             advance();

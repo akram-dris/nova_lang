@@ -17,6 +17,8 @@ enum class TokenType {
     KEYWORD_WHILE,
     KEYWORD_FUN,
     KEYWORD_RETURN,
+    KEYWORD_START,
+    KEYWORD_END,
     COMMA,
     COLON,
     EQUAL,
